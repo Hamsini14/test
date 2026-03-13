@@ -1054,20 +1054,20 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {replayResult && !replayResult.error && (
-        <div className="fixed inset-0 bg-[#050505]/95 backdrop-blur-xl z-[600] flex items-center justify-center p-6 animate-in fade-in duration-500">
-          <div className="bg-[#0a0a0c] border border-white/5 rounded-[56px] shadow-[0_0_100px_rgba(99,102,241,0.1)] w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-500 relative">
+        <div className="fixed inset-0 bg-[#050505]/95 backdrop-blur-xl z-[600] flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="bg-[#0a0a0c] border border-white/5 rounded-[48px] shadow-[0_0_100px_rgba(99,102,241,0.1)] w-full max-w-4xl max-h-[90vh] overflow-y-auto premium-scrollbar animate-in zoom-in-95 duration-500 relative">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[150px] -mr-64 -mt-64"></div>
-            <div className={`p-12 text-white flex justify-between items-center relative z-10 ${replayResult.match ? 'bg-emerald-600 glow-emerald' : 'bg-amber-500 glow-amber'}`}>
-              <div className="flex items-center gap-6">
-                {replayResult.match ? <ShieldCheck className="w-10 h-10" /> : <AlertTriangle className="w-10 h-10" />}
-                <h3 className="text-2xl font-black uppercase tracking-widest">AI Decision Transparency Report</h3>
+            <div className={`p-8 text-white flex justify-between items-center sticky top-0 z-20 ${replayResult.match ? 'bg-emerald-600 glow-emerald' : 'bg-amber-500 glow-amber'}`}>
+              <div className="flex items-center gap-4">
+                {replayResult.match ? <ShieldCheck className="w-8 h-8" /> : <AlertTriangle className="w-8 h-8" />}
+                <h3 className="text-xl font-black uppercase tracking-widest">AI Decision Transparency Report</h3>
               </div>
-              <button onClick={() => setReplayResult(null)} className="hover:bg-white/10 p-3 rounded-full transition-all"><X className="w-10 h-10" /></button>
+              <button onClick={() => setReplayResult(null)} className="hover:bg-white/10 p-2 rounded-full transition-all"><X className="w-8 h-8" /></button>
             </div>
             
-            <div className="p-20 relative z-10">
-              <div className={`mb-16 text-center p-10 rounded-[40px] border-2 backdrop-blur-md ${replayResult.match ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-900/10' : 'bg-amber-500/5 border-amber-500/20 text-amber-400 shadow-lg shadow-amber-900/10'}`}>
-                <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">{replayResult.status}</h2>
+            <div className="p-10 relative z-10">
+              <div className={`mb-10 text-center p-8 rounded-[32px] border-2 backdrop-blur-md ${replayResult.match ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-900/10' : 'bg-amber-500/5 border-amber-500/20 text-amber-400 shadow-lg shadow-amber-900/10'}`}>
+                <h2 className="text-3xl font-black uppercase tracking-tighter mb-3">{replayResult.status}</h2>
                 <p className="text-xs font-bold opacity-80 uppercase tracking-[0.3em] max-w-2xl mx-auto leading-relaxed">
                   {replayResult.match 
                     ? "Protocol Integrity Check: The AI model reproduced the exact same decision when re-run on original immutable inputs." 
@@ -1075,12 +1075,12 @@ const Dashboard = ({ onLogout }) => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-16">
-                <div className="space-y-8">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] border-b border-white/5 pb-6">Stored Distributed Ledger</h4>
-                  <div className="bg-white/[0.02] p-10 rounded-[40px] border border-white/5 shadow-inner">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] border-b border-white/5 pb-4">Stored Distributed Ledger</h4>
+                  <div className="bg-white/[0.02] p-8 rounded-[32px] border border-white/5 shadow-inner text-center md:text-left">
                     <p className="text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Historical Verdict</p>
-                    <p className={`text-4xl font-black mb-6 ${
+                    <p className={`text-3xl font-black mb-4 ${
                       replayResult.stored_decision === 'Loan Approved' || replayResult.stored_decision === 'BUY' 
                         ? 'text-emerald-400' 
                         : (replayResult.stored_decision === 'Loan Rejected' || replayResult.stored_decision === 'SELL' ? 'text-rose-400' : 'text-slate-400')
@@ -1088,15 +1088,15 @@ const Dashboard = ({ onLogout }) => {
                       {replayResult.stored_decision}
                     </p>
                     <p className="text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Historical Confidence</p>
-                    <p className="text-xl font-bold text-white">{(replayResult.stored_confidence * 100).toFixed(2)}% <span className="text-slate-500 text-xs ml-1 uppercase">Probability</span></p>
+                    <p className="text-lg font-bold text-white">{(replayResult.stored_confidence * 100).toFixed(2)}% <span className="text-slate-500 text-xs ml-1 uppercase">Probability</span></p>
                   </div>
                 </div>
 
-                <div className="space-y-8">
-                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] border-b border-indigo-500/20 pb-6">Live Execution Replay</h4>
-                  <div className="bg-indigo-500/5 p-10 rounded-[40px] border border-indigo-500/10 shadow-lg shadow-indigo-900/5">
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] border-b border-indigo-500/20 pb-4">Live Execution Replay</h4>
+                  <div className="bg-indigo-500/5 p-8 rounded-[32px] border border-indigo-500/10 shadow-lg shadow-indigo-900/5 text-center md:text-left">
                     <p className="text-[10px] font-black uppercase text-indigo-400/70 mb-2 tracking-widest">Current Verdict</p>
-                    <p className={`text-4xl font-black mb-6 ${
+                    <p className={`text-3xl font-black mb-4 ${
                       replayResult.replayed_decision === 'Loan Approved' || replayResult.replayed_decision === 'BUY' 
                         ? 'text-emerald-400' 
                         : (replayResult.replayed_decision === 'Loan Rejected' || replayResult.replayed_decision === 'SELL' ? 'text-rose-400' : 'text-white')
@@ -1104,13 +1104,13 @@ const Dashboard = ({ onLogout }) => {
                       {replayResult.replayed_decision}
                     </p>
                     <p className="text-[10px] font-black uppercase text-indigo-400/70 mb-2 tracking-widest">Current Confidence</p>
-                    <p className="text-xl font-bold text-white">{(replayResult.replayed_confidence * 100).toFixed(2)}% <span className="text-slate-500 text-xs ml-1 uppercase">Probability</span></p>
+                    <p className="text-lg font-bold text-white">{(replayResult.replayed_confidence * 100).toFixed(2)}% <span className="text-slate-500 text-xs ml-1 uppercase">Probability</span></p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-20 flex justify-center">
-                 <button onClick={() => setReplayResult(null)} className="bg-white/5 hover:bg-white/10 text-white font-black px-16 py-6 rounded-full uppercase tracking-[0.3em] transition-all border border-white/10 text-xs shadow-xl backdrop-blur-md">
+              <div className="mt-12 flex justify-center">
+                 <button onClick={() => setReplayResult(null)} className="bg-white/5 hover:bg-white/10 text-white font-black px-12 py-5 rounded-full uppercase tracking-[0.3em] transition-all border border-white/10 text-[10px] shadow-xl backdrop-blur-md">
                    Dismiss Transparency Report
                  </button>
               </div>
