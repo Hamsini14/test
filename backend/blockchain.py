@@ -36,6 +36,10 @@ class BlockchainMock:
         
     def halt_system(self):
         """Trigger circuit breaker."""
+        import traceback
+        import sys
+        traceback.print_stack(file=sys.stderr)
+        print("SYSTEM HALTED WAS CALLED!", file=sys.stderr)
         self.system_status = "HALTED"
 
 # Singleton instance

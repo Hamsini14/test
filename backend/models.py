@@ -1,7 +1,8 @@
-from pydantic import BaseModel, ConfigDict # pyre-ignore[21]
-from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, field_validator # pyre-ignore[21]
+from typing import Optional, List, Any
 from datetime import datetime
 from enum import Enum
+import json
 
 class EmploymentStatus(str, Enum):
     employed = "employed"
@@ -25,6 +26,19 @@ class DecisionResponse(BaseModel):
     execution_hash: str
     timestamp: datetime
     status: str
+    fairness_check: Optional[Any] = None
+    fairness_score: Optional[float] = None
+
+    @field_validator('fairness_check', mode='before')
+    @classmethod
+    def parse_fairness(cls, v):
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except Exception:
+                pass
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -46,6 +60,19 @@ class AuditRecord(BaseModel):
     status: str
     tampered: bool
     timestamp: datetime
+    fairness_check: Optional[Any] = None
+    fairness_score: Optional[float] = None
+
+    @field_validator('fairness_check', mode='before')
+    @classmethod
+    def parse_fairness(cls, v):
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except Exception:
+                pass
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,6 +100,19 @@ class StockDecisionResponse(BaseModel):
     execution_hash: str
     timestamp: datetime
     status: str
+    fairness_check: Optional[Any] = None
+    fairness_score: Optional[float] = None
+
+    @field_validator('fairness_check', mode='before')
+    @classmethod
+    def parse_fairness(cls, v):
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except Exception:
+                pass
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,6 +131,19 @@ class StockAuditRecord(BaseModel):
     status: str
     tampered: bool
     timestamp: datetime
+    fairness_check: Optional[Any] = None
+    fairness_score: Optional[float] = None
+
+    @field_validator('fairness_check', mode='before')
+    @classmethod
+    def parse_fairness(cls, v):
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except Exception:
+                pass
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -100,3 +153,8 @@ class StockTamperRequest(BaseModel):
     current_price: Optional[float] = None
     ma_50: Optional[float] = None
     rsi_14: Optional[float] = None
+
+class FairnessBiasReport(BaseModel):
+    bias_alerts: List[dict]
+    fairness_score: float
+    distribution_data: dict

@@ -29,6 +29,8 @@ class ExecutionRecordDB(Base):
     blockchain_tx_id = Column(String, default="Pending")
     status          = Column(String, default="Anchoring")  # Anchoring | Anchored | Verified | Tampering Detected
     tampered        = Column(Boolean, default=False)        # True if this record was tampered for demo
+    fairness_check  = Column(String, nullable=True)         # JSON-encoded variations results
+    fairness_score  = Column(Float, nullable=True)          # Score for this specific record
 
 class StockExecutionRecordDB(Base):
     __tablename__ = "stock_execution_records"
@@ -47,6 +49,8 @@ class StockExecutionRecordDB(Base):
     status          = Column(String, default="Anchoring") 
     tampered        = Column(Boolean, default=False)
     input_hash      = Column(String, index=True)
+    fairness_check  = Column(String, nullable=True)
+    fairness_score  = Column(Float, nullable=True)
 
 def get_db():
     db = SessionLocal()

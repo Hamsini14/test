@@ -7,9 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware # pyre-ignore[21]
 from sqlalchemy.orm import Session # pyre-ignore[21]
 import pandas as pd
 import yfinance as yf
+import json
 from typing import List, Optional, Dict, Any
 
-from backend import models, database, crypto_utils, ai_engine, stock_engine, blockchain # pyre-ignore[21]
+from backend import models, database, crypto_utils, ai_engine, stock_engine, blockchain, fairness_engine # pyre-ignore[21]
 from backend.behavior_detector import analyze_behavior
 
 app = FastAPI(title="AI Accountability Framework", version="2.0.0")
@@ -21,6 +22,8 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "http://[::1]:5173",
+        "http://[::1]:5174",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -83,6 +86,7 @@ def anchor_and_verify_task(decision_id: str, execution_hash: str):
             "decision": str(record.decision),
             "confidence": float(record.confidence),
             "timestamp": ts_str,
+            "fairness_check": json.loads(record.fairness_check) if record.fairness_check else None,
         }
         recomputed_hash = crypto_utils.generate_hash(execution_record_dict)
 
@@ -131,6 +135,7 @@ def anchor_and_verify_stock_task(decision_id: str, execution_hash: str):
             "decision": str(record.decision),
             "confidence": float(record.confidence),
             "timestamp": ts_str,
+            "fairness_check": json.loads(record.fairness_check) if record.fairness_check else None,
         }
         recomputed_hash = crypto_utils.generate_hash(execution_record_dict)
 
@@ -173,6 +178,15 @@ def execute_ai_decision(
     decision_id = f"TXN_{str(uuid.uuid4()).split('-')[0]}"
     timestamp = datetime.datetime.utcnow()
 
+    # Stage Fairness: Counterfactual Testing
+    variations = fairness_engine.generate_counterfactual_variations(input_dict, model_type="loan")
+    variant_decisions = []
+    for v in variations:
+        v_decision, _ = ai_engine._predict(v)
+        variant_decisions.append(v_decision)
+    
+    fairness_test_result = fairness_engine.run_fairness_test(ai_result["decision"], variant_decisions)
+
     # Stage 4: Execution record
     # Use consistent format for hashing
     ts_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")
@@ -189,6 +203,7 @@ def execute_ai_decision(
         "decision": ai_result["decision"],
         "confidence": float(ai_result["confidence"]),
         "timestamp": ts_str,
+        "fairness_check": fairness_test_result,
     }
 
     # Stage 5: Execution hash
@@ -213,6 +228,8 @@ def execute_ai_decision(
         blockchain_tx_id="Pending",
         status="Anchoring",
         tampered=False,
+        fairness_check=json.dumps(fairness_test_result),
+        fairness_score=float(fairness_test_result["stability_score"]) * 100,
     )
     db.add(db_record)
     db.commit()
@@ -229,6 +246,8 @@ def execute_ai_decision(
         execution_hash=execution_hash,
         timestamp=timestamp,
         status="Anchoring",
+        fairness_check=fairness_test_result,
+        fairness_score=float(fairness_test_result["stability_score"]) * 100,
     )
 
 # -----------------------------------------------------------------------
@@ -257,6 +276,20 @@ def execute_stock_decision(
     decision_id = f"STK_{str(uuid.uuid4()).split('-')[0]}"
     timestamp = datetime.datetime.utcnow()
 
+    # Stage Fairness: Counterfactual Testing for Stock
+    variations = fairness_engine.generate_counterfactual_variations({
+        "current_price": ai_result["current_price"],
+        "rsi_14": ai_result["rsi_14"]
+    }, model_type="stock")
+    variant_decisions = []
+    for v in variations:
+        v_res = stock_engine.execute_stock_decision_from_indicators(
+            v["current_price"], ai_result["ma_50"], v["rsi_14"]
+        )
+        variant_decisions.append(v_res["decision"])
+    
+    fairness_test_result = fairness_engine.run_fairness_test(ai_result["decision"], variant_decisions)
+
     ts_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")
     execution_record_dict = {
         "decision_id": decision_id,
@@ -268,6 +301,7 @@ def execute_stock_decision(
         "decision": ai_result["decision"],
         "confidence": float(ai_result["confidence"]),
         "timestamp": ts_str,
+        "fairness_check": fairness_test_result,
     }
 
     execution_hash = crypto_utils.generate_hash(execution_record_dict)
@@ -287,6 +321,8 @@ def execute_stock_decision(
         blockchain_tx_id="Pending",
         status="Anchoring",
         tampered=False,
+        fairness_check=json.dumps(fairness_test_result),
+        fairness_score=float(fairness_test_result["stability_score"]) * 100,
     )
     db.add(db_record)
     db.commit()
@@ -305,8 +341,9 @@ def execute_stock_decision(
         execution_hash=execution_hash,
         timestamp=timestamp,
         status="Anchoring",
+        fairness_check=fairness_test_result,
+        fairness_score=float(fairness_test_result["stability_score"]) * 100,
     )
-
 
 
 @app.get("/api/stats")
@@ -513,17 +550,29 @@ def get_stock_history(ticker: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/audits", response_model=List[models.AuditRecord])
+@app.get("/api/audits") # Manually serialize to handle JSON fields
 def get_audits(db: Session = Depends(database.get_db)):
-    return db.query(database.ExecutionRecordDB).order_by(
+    records = db.query(database.ExecutionRecordDB).order_by(
         database.ExecutionRecordDB.timestamp.desc()
     ).all()
+    results = []
+    for r in records:
+        r_dict = models.AuditRecord.from_orm(r).dict()
+        r_dict["fairness_check"] = json.loads(r.fairness_check) if r.fairness_check else None
+        results.append(r_dict)
+    return results
 
-@app.get("/api/stock/audits", response_model=List[models.StockAuditRecord])
+@app.get("/api/stock/audits")
 def get_stock_audits(db: Session = Depends(database.get_db)):
-    return db.query(database.StockExecutionRecordDB).order_by(
+    records = db.query(database.StockExecutionRecordDB).order_by(
         database.StockExecutionRecordDB.timestamp.desc()
     ).all()
+    results = []
+    for r in records:
+        r_dict = models.StockAuditRecord.from_orm(r).dict()
+        r_dict["fairness_check"] = json.loads(r.fairness_check) if r.fairness_check else None
+        results.append(r_dict)
+    return results
 
 
 # -----------------------------------------------------------------------
@@ -559,6 +608,7 @@ def verify_record(decision_id: str, db: Session = Depends(database.get_db)):
         "decision": str(record.decision),
         "confidence": float(record.confidence),
         "timestamp": ts_str,
+        "fairness_check": json.loads(record.fairness_check) if record.fairness_check else None,
     }
     recomputed_hash = crypto_utils.generate_hash(execution_record_dict)
 
@@ -681,6 +731,7 @@ def verify_stock_record(decision_id: str, db: Session = Depends(database.get_db)
         "decision": str(record.decision),
         "confidence": float(record.confidence),
         "timestamp": ts_str,
+        "fairness_check": json.loads(record.fairness_check) if record.fairness_check else None,
     }
     recomputed_hash = crypto_utils.generate_hash(execution_record_dict)
 
@@ -765,3 +816,31 @@ def replay_stock_decision(decision_id: str, db: Session = Depends(database.get_d
 @app.get("/api/system/status")
 def system_status():
     return {"status": blockchain.blockchain_client.get_system_status()}
+
+@app.get("/api/fairness/analysis")
+def get_fairness_analysis(db: Session = Depends(database.get_db)):
+    # Loan Fairness Analysis
+    loan_records = db.query(database.ExecutionRecordDB).all()
+    loan_data = [
+        {
+            "credit_score": r.credit_score,
+            "decision": r.decision
+        } for r in loan_records
+    ]
+    loan_report = fairness_engine.compute_bias_metrics(loan_data, model_type="loan")
+    
+    # Stock Fairness Analysis
+    stock_records = db.query(database.StockExecutionRecordDB).all()
+    stock_data = [
+        {
+            "ticker": r.ticker,
+            "decision": r.decision
+        } for r in stock_records
+    ]
+    stock_report = fairness_engine.compute_bias_metrics(stock_data, model_type="stock")
+    
+    return {
+        "loan": loan_report,
+        "stock": stock_report,
+        "overall_fairness_score": (loan_report["fairness_score"] + stock_report["fairness_score"]) / 2
+    }

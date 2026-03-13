@@ -3,7 +3,7 @@ echo Starting AI Accountability Framework...
 
 start "Backend - FastAPI" cmd /k "cd /d %~dp0 && python -m uvicorn backend.main:app --reload --port 8000"
 timeout /t 2 /nobreak >nul
-start "Frontend - React" cmd /k "cd /d %~dp0\frontend && npm run dev"
+start "Frontend - React" powershell -ExecutionPolicy Bypass -NoExit -Command "cd '%~dp0\frontend'; npm run dev"
 
 echo.
 echo Servers started!

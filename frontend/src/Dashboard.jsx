@@ -40,6 +40,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab ] = useState('overview'); // overview | engine | audit
   const [systemStatus, setSystemStatus] = useState('SAFE');
+  const [fairnessData, setFairnessData] = useState(null);
+  const [loadingFairness, setLoadingFairness] = useState(false);
   
   const [formData, setFormData] = useState(DEFAULT_INPUT);
   const [tamperingRecord, setTamperingRecord] = useState(null);
@@ -92,8 +94,18 @@ const Dashboard = () => {
       if (stockRes.ok) setStockRecords(await stockRes.json());
       if (statusRes.ok) setSystemStatus((await statusRes.json()).status);
       if (statsRes.ok) setStats(await statsRes.json());
+      fetchFairnessData();
     } catch (err) {
       console.error('Fetch error:', err);
+    }
+  };
+
+  const fetchFairnessData = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/fairness/analysis`);
+      if (res.ok) setFairnessData(await res.json());
+    } catch (err) {
+      console.error('Fairness fetch error:', err);
     }
   };
 
@@ -304,7 +316,8 @@ const Dashboard = () => {
     { id: 'engine', label: 'Loan Engine', icon: <Activity className="w-4 h-4" /> },
     { id: 'stock_engine', label: 'Stock AI Engine', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'audit', label: 'Audit Log', icon: <Blocks className="w-4 h-4" /> },
-    { id: 'stock_audit', label: 'Stock Audit Log', icon: <Database className="w-4 h-4" /> }
+    { id: 'stock_audit', label: 'Stock Audit Log', icon: <Database className="w-4 h-4" /> },
+    { id: 'fairness', label: 'Fairness Panel', icon: <Target className="w-4 h-4" /> }
   ];
 
   const downloadCSV = () => {
@@ -375,7 +388,7 @@ const Dashboard = () => {
               systemStatus === 'SAFE' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100 animate-pulse'
             }`}>
             <div className={`w-3 h-3 rounded-full ${systemStatus === 'SAFE' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-            <span className="uppercase tracking-[0.2em] text-[10px]">{systemStatus} OPERATIONAL</span>
+            <span className="uppercase tracking-[0.2em] text-[10px]">{systemStatus === 'SAFE' ? 'SAFE OPERATIONAL' : 'SYSTEM HALTED'}</span>
           </div>
         </div>
       </header>
@@ -696,7 +709,94 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* --- Audit Tab --- */}
+        {/* --- Fairness Tab --- */}
+        {activeTab === 'fairness' && fairnessData && (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Overall Fairness Score */}
+              <div className="bg-white p-12 rounded-[56px] shadow-2xl shadow-indigo-100 border border-indigo-50 flex flex-col items-center justify-center text-center">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Integrity + Fairness Score</p>
+                <div className="relative w-48 h-48 mb-8">
+                    <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100" />
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={552} strokeDashoffset={552 - (552 * fairnessData.overall_fairness_score) / 100} className="text-indigo-600" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                        <span className="text-5xl font-black text-slate-900">{fairnessData.overall_fairness_score.toFixed(0)}</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fairness pts</span>
+                    </div>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">System Accountability Rating</h3>
+                <p className="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Aggregated Across All Decision Modules</p>
+              </div>
+
+              {/* Bias Alerts */}
+              <div className="bg-white p-12 rounded-[56px] shadow-2xl shadow-slate-200/40 border border-slate-100">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-rose-50 p-4 rounded-3xl text-rose-600"><AlertTriangle className="w-8 h-8"/></div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">Bias Alerts</h3>
+                </div>
+                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-4">
+                  {[...fairnessData.loan.bias_alerts, ...fairnessData.stock.bias_alerts].length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-slate-300">
+                      <ShieldCheck className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="font-black uppercase tracking-widest text-xs">No Discriminatory Patterns Detected</p>
+                    </div>
+                  ) : (
+                    [...fairnessData.loan.bias_alerts, ...fairnessData.stock.bias_alerts].map((alert, i) => (
+                      <div key={i} className="bg-rose-50/50 p-6 rounded-3xl border border-rose-100 flex items-start gap-4">
+                        <div className="w-2 h-2 mt-2 rounded-full bg-rose-500 animate-pulse"></div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-rose-600 tracking-widest mb-1">{alert.segment} - {alert.metric}</p>
+                          <p className="text-sm font-bold text-slate-800 mb-1">{alert.message}</p>
+                          <p className="text-[10px] font-black text-rose-400 uppercase">Detection Value: {alert.value}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-12 rounded-[56px] shadow-2xl shadow-indigo-100 border border-indigo-50">
+               <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-10">Decision Distribution (Bias Detection)</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                  <div>
+                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] mb-8">Loan Decisions (By Credit Band)</h4>
+                    <div className="space-y-6">
+                      {Object.entries(fairnessData.loan.distribution_data).map(([band, rate]) => (
+                        <div key={band}>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{band}</span>
+                            <span className="text-xs font-black text-slate-900">{rate}% Rejection</span>
+                          </div>
+                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${rate > 80 ? 'bg-rose-500' : 'bg-indigo-600'}`} style={{width: `${rate}%`}}></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] mb-8">Stock Decisions (By Asset)</h4>
+                    <div className="space-y-6">
+                      {Object.entries(fairnessData.stock.distribution_data).map(([ticker, rate]) => (
+                        <div key={ticker}>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{ticker}</span>
+                            <span className="text-xs font-black text-slate-900">{rate}% Sell Bias</span>
+                          </div>
+                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${rate > 80 ? 'bg-rose-500' : 'bg-emerald-600'}`} style={{width: `${rate}%`}}></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+        )}
         {activeTab === 'audit' && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="bg-white rounded-[56px] shadow-2xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
@@ -714,6 +814,7 @@ const Dashboard = () => {
                       <th className="px-12 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Execution Identity</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Verdict</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Integrity Hash</th>
+                      <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Fairness (Stability)</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-12 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Transparency Control</th>
                     </tr>
@@ -738,6 +839,14 @@ const Dashboard = () => {
                               <span className="font-mono text-[9px] text-slate-400 uppercase">{rec.execution_hash.substring(0,8)}...</span>
                            </div>
                         </td>
+                        <td className="px-8 py-8">
+                            {rec.fairness_check && (
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${rec.fairness_check.status === 'PASS' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                <span className="text-xs font-black text-slate-700">{(rec.fairness_check.stability_score * 100).toFixed(0)}% Stable</span>
+                              </div>
+                            )}
+                         </td>
                         <td className="px-8 py-8">{getStatusBadge(rec.status)}</td>
                         <td className="px-12 py-8 text-right space-x-3">
                             <button onClick={() => replayDecision(rec.decision_id)} disabled={replaying === rec.decision_id} 
@@ -778,6 +887,7 @@ const Dashboard = () => {
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Verdict</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Integrity Hash</th>
+                      <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Fairness (Stability)</th>
                       <th className="px-8 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-12 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Transparency Control</th>
                     </tr>
@@ -805,6 +915,14 @@ const Dashboard = () => {
                               <span className="font-mono text-[9px] text-slate-400 uppercase">{rec.execution_hash.substring(0,8)}...</span>
                            </div>
                         </td>
+                        <td className="px-8 py-8">
+                            {rec.fairness_check && (
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${rec.fairness_check.status === 'PASS' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                <span className="text-xs font-black text-slate-700">{(rec.fairness_check.stability_score * 100).toFixed(0)}% Stable</span>
+                              </div>
+                            )}
+                         </td>
                         <td className="px-8 py-8">{getStatusBadge(rec.status)}</td>
                         <td className="px-12 py-8 text-right space-x-3">
                             <button onClick={() => replayStockDecision(rec.decision_id)} disabled={replaying === rec.decision_id} 
