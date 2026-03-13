@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+py-algorand-sdk

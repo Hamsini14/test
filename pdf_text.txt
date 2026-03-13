@@ -1,0 +1,216 @@
+Hackathon project flow
+Final Integrated Framework: Proof-of-Execution
+System for AI Accountability
+Your system builds a tamper-proof accountability layer for AI systems by combining:
+Proof of Input Integrity
+Behavioral Consistency Fingerprinting
+Merkle-based Execution Anchoring
+Blockchain verification (Algorand)
+Smart Contract Circuit Breaker
+AI Execution Audit Dashboard
+Stage 1 — Input Capture (Proof of Input Integrity
+Begins)
+When a user submits data, the system first captures and seals the input before the AI runs.
+Example user input:
+{
+  "credit_score":620,
+  "income":45000
+}
+The system generates an Input Hash:
+input_hash = SHA256(input_data)
+Example:
+input_hash = 91A4F8B2...
+This ensures the original input cannot be modified later.
+This is the first part of the chain:
+Input → Hash
+Hackathon project flow
+1
+Stage 2 — Behavioral Consistency Fingerprinting
+Before committing the decision to the blockchain, the system checks if the AI behaves 
+consistently.
+The system generates slightly varied inputs.
+Example:
+Input A: credit_score = 620
+Input B: credit_score = 618
+Input C: credit_score = 622
+AI runs for all inputs.
+Example outputs:
+A → Reject
+B → Reject
+C → Reject
+AI is consistent ✅
+But if outputs differ:
+Reject
+Approve
+Reject
+The system flags:
+⚠ Behavioral Instability Detected
+In that case:
+the batch is flagged
+anchoring can be blocked or marked risky
+This ensures the AI decision is not manipulated or unstable.
+Stage 3 — AI Executes Decision
+Once input integrity and behavioral checks pass, the AI produces the final decision.
+Example output:
+{
+  "decision_id":"TXN001",
+  "model_version":"LoanModel_v3.2",
+  "ai_decision":"Loan Rejected",
+Hackathon project flow
+2
+  "confidence":0.82
+}
+Stage 4 — Execution Record Creation
+Now the system creates the complete execution record.
+This record includes:
+input hash
+AI decision
+model version
+timestamp
+Example:
+{
+  "decision_id":"TXN001",
+  "input_hash":"91A4F8B2...",
+  "model_version":"LoanModel_v3.2",
+  "decision":"Loan Rejected",
+  "confidence":0.82,
+  "timestamp":"2026-03-13T10:32:21Z"
+}
+This record represents the official AI execution event.
+Stage 5 — Execution Hash Generation
+The system generates the Execution Hash.
+execution_hash = SHA256(execution_record)
+Example:
+execution_hash = A7F3B9C1D4F87E12
+This hash acts as the fingerprint of the entire AI execution.
+This proves:
+Input → Model → Output
+Stage 6 — Merkle Tree Batch Creation
+Hackathon project flow
+3
+Since many AI decisions occur continuously, hashes are batched.
+Example hashes:
+H1
+H2
+H3
+H4
+Merkle tree construction:
+H1 + H2 → H12
+H3 + H4 → H34
+H12 + H34 → ROOT
+Final value:
+Merkle Root = 8F92AB11CD
+This root represents all AI decisions in that batch.
+Stage 7 — Blockchain Anchoring (Algorand)
+The Merkle root is anchored on the Algorand blockchain.
+Example blockchain transaction:
+{
+  "batch_id":"BATCH001",
+  "merkle_root":"8F92AB11CD",
+  "timestamp":"2026-03-13 10:45:00",
+  "system_id":"AI_SYSTEM_01"
+}
+Once stored:
+data becomes immutable
+cannot be modified
+can be verified globally
+Stage 8 — Off-Chain Secure Storage
+The full execution records are stored off-chain.
+Example database:
+Hackathon project flow
+4
+decision_id
+execution_record
+hash
+TXN001
+JSON record
+A7F3B9
+TXN002
+JSON record
+B8D123
+This keeps sensitive data private while blockchain stores proof only.
+Stage 9 — Smart Contract Circuit Breaker
+The system continuously monitors AI integrity.
+Smart contract state:
+system_status = SAFE
+If anomalies occur such as:
+hash mismatch
+behavioral instability
+suspicious executions
+The system updates:
+system_status = HALTED
+Now before every AI execution:
+if system_status == HALTED:
+    stop AI execution
+Output:
+AI system paused for manual review
+This prevents harmful AI actions.
+Stage 10 — AI Execution Audit Dashboard
+Auditors access the Audit Dashboard.
+The dashboard shows all AI executions.
+Example:
+Decision ID
+Decision
+Model
+Hash
+Blockchain TX
+Status
+TXN001
+Loan Rejected
+v1
+a8f39c
+TX8932
+Verified
+Auditor actions:
+view execution record
+Hackathon project flow
+5
+verify blockchain proof
+check system status
+Stage 11 — Verification Process
+When an auditor investigates a decision:
+1️⃣ Execution record is retrieved
+2️⃣ System recomputes the hash
+hash(execution_record)
+3️⃣ Merkle proof path is reconstructed
+H1 + H2 → H12
+H12 + H34 → ROOT
+4️⃣ Compare root with Algorand blockchain record
+If matched:
+✔ AI decision authentic
+✔ Input not altered
+✔ Output not modified
+If not matched:
+❌ Tampering detected
+Final End-to-End System Flow
+User Input
+      ↓
+Input Hashing (Proof of Input Integrity)
+      ↓
+Behavioral Consistency Check
+      ↓
+AI Decision Execution
+      ↓
+Execution Record Creation
+      ↓
+Execution Hash Generation
+      ↓
+Merkle Tree Batch Formation
+Hackathon project flow
+6
+      ↓
+Merkle Root Anchored on Algorand
+      ↓
+Execution Records Stored Off-Chain
+      ↓
+Audit Dashboard Monitoring
+      ↓
+Smart Contract Circuit Breaker (Safety Layer)
+      ↓
+Auditor Verification using Blockchain Proof
+Final One-Line Description of Your System
+Your platform provides a tamper-proof accountability framework for AI systems that secures
+inputs, validates AI behavior, anchors execution proofs on blockchain, and enables
+transparent auditing with automated safety controls.
+Hackathon project flow
+7
