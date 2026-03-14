@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import time
 import datetime
@@ -18,12 +19,11 @@ app = FastAPI(title="AI Accountability Framework", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://ai-proof-of-execution.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://[::1]:5173",
-        "http://[::1]:5174",
+        "http://127.0.0.1:5174"
     ],
     allow_credentials=True,
     allow_methods=["*"],
